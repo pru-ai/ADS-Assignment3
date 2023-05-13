@@ -95,22 +95,28 @@ df_co2 = df_co2[10:]
 df_co2.set_index(df_co2.columns[0], inplace = True)
 
 
-def logistics(t, n0, g, t0):
-    """Calculates the logistic function with scale factor n0 & growth rate g"""
-    f = n0 / (1 + np.exp(-g * (t - t0)))
+def poly(t, c0, c1, c2, c3):
+    """ Computes a polynominal c0 + c1*t + c2*t^2 + c3*t^3"""
+    t = t - 2000
+    f = c0 + c1 * t + c2 * t**2 + c3 * t**3
     return f
 
 
-param, cov = opt.curve_fit(
-    logistics, df_co2.index, df_co2["United States"],
-    p0=[[12.4e6, -0.01, 2008]])
-df_co2["fit"] = logistics(df_co2.index, *param)
+param, pcorr = opt.curve_fit(
+    poly, df_co2.index, df_co2["United States"])
+years = np.arange(2000, 2050)
+sigmas = np.sqrt(np.diag(pcorr))
+lower, upper = err.err_ranges(years, poly, param, sigmas)
+forecast = poly(years, *param)
 plt.figure()
-plt.plot(df_co2.index, df_co2["United States"], label = 'Actual')
-plt.plot(df_co2.index, df_co2['fit'], label="Fit")
+plt.plot(df_co2.index, df_co2["United States"], label = 'Data')
+plt.plot(years, forecast, label="Forecast")
 plt.xlabel("Year")
-ticks_to_use = df_co2.index[::4]
+#plt.fill_between(years, upper, upper, alpha=0.9)
+ticks_to_use = years[::5]
 plt.xticks(ticks_to_use)
 plt.legend()
 plt.title("CO2 Emissions in kg")
 plt.show()
+print("C02 emissions (in kg) in")
+print("2030:", poly(2025, *param) / 1.0e6, "Mill.")
